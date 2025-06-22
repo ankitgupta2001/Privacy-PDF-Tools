@@ -51,19 +51,19 @@ const menuCategories: MenuCategory[] = [
       {
         id: 'merge',
         label: 'Merge PDFs',
-        href: '/',
+        href: '/pdf/merge',
         icon: Combine,
       },
       {
         id: 'split',
         label: 'Split PDF',
-        href: '/',
+        href: '/pdf/split',
         icon: Scissors,
       },
       {
         id: 'compress',
         label: 'Compress PDF',
-        href: '/',
+        href: '/pdf/compress',
         icon: Minimize2,
       },
     ],
@@ -141,10 +141,7 @@ export function Sidebar({ isOpen, isExpanded, onToggleOpen, onToggleExpanded }: 
   };
 
   const isActiveRoute = (href: string) => {
-    if (href === '/') {
-      return pathname === '/';
-    }
-    return pathname.startsWith(href);
+    return pathname === href;
   };
 
   return (
@@ -159,7 +156,7 @@ export function Sidebar({ isOpen, isExpanded, onToggleOpen, onToggleExpanded }: 
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           {isExpanded && (
-            <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
                 <FileText className="h-5 w-5 text-white" />
               </div>
@@ -169,7 +166,7 @@ export function Sidebar({ isOpen, isExpanded, onToggleOpen, onToggleExpanded }: 
                 </h1>
                 <p className="text-xs text-gray-500">Secure • Private • Fast</p>
               </div>
-            </div>
+            </Link>
           )}
           <Button
             variant="ghost"
@@ -281,7 +278,7 @@ export function Sidebar({ isOpen, isExpanded, onToggleOpen, onToggleExpanded }: 
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
               <FileText className="h-5 w-5 text-white" />
             </div>
@@ -291,7 +288,7 @@ export function Sidebar({ isOpen, isExpanded, onToggleOpen, onToggleExpanded }: 
               </h1>
               <p className="text-xs text-gray-500">Secure • Private • Fast</p>
             </div>
-          </div>
+          </Link>
           <Button
             variant="ghost"
             size="sm"
