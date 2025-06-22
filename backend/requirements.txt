@@ -1,5 +1,18 @@
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
+# ASGI framework
+fastapi==0.100.0
+
+# Uvicorn for running FastAPI
+uvicorn[standard]==0.23.1
+
+# PDF processing (in-memory, full MuPDF API)
 PyMuPDF==1.23.8
-python-dotenv==1.0.0
+
+# Handling multipart/form-data in FastAPI
+python-multipart==0.0.6
+
+# (Optional) ZIP utilities if you need explicit zipfile support
+# zipfile is in stdlib—no install needed
+
+# DEV / TEST (optional)
+# pytest==7.4.0
+# pytest-asyncio==0.21.0
