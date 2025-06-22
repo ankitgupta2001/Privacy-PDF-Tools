@@ -1,8 +1,3 @@
-"""
-Privacy-First PDF Tools Backend
-FastAPI server for PDF processing with complete privacy protection
-"""
-
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -11,13 +6,7 @@ import io
 import asyncio
 from contextlib import asynccontextmanager
 
-# Note: In a real deployment, you would install these packages:
-# pip install fastapi uvicorn PyMuPDF python-multipart
-
-# For this demo, we'll use mock implementations
-# In production, uncomment the imports below:
-# import fitz  # PyMuPDF
-# import pymupdf
+import fitz
 
 app = FastAPI(
     title="Privacy PDF Tools API",
@@ -59,46 +48,46 @@ class PDFProcessor:
     def merge_pdfs(pdf_files: List[bytes]) -> bytes:
         """Merge multiple PDF files into one"""
         # Mock implementation - in production, use PyMuPDF:
-        # doc = fitz.open()
-        # for pdf_bytes in pdf_files:
-        #     pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        #     doc.insert_pdf(pdf_doc)
-        # output = io.BytesIO()
-        # doc.save(output)
-        # return output.getvalue()
+        doc = fitz.open()
+        for pdf_bytes in pdf_files:
+            pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            doc.insert_pdf(pdf_doc)
+        output = io.BytesIO()
+        doc.save(output)
+        return output.getvalue()
         
         # Mock merged PDF
-        return b'%PDF-1.4\n%\xc4\xe5\xf2\xe5\xeb\xa7\xf3\xa0\xd0\xc4\xc6\n'
+        # return b'%PDF-1.4\n%\xc4\xe5\xf2\xe5\xeb\xa7\xf3\xa0\xd0\xc4\xc6\n'
     
     @staticmethod
     def split_pdf(pdf_content: bytes, start_page: int, end_page: int) -> bytes:
         """Extract pages from PDF"""
         # Mock implementation - in production, use PyMuPDF:
-        # doc = fitz.open(stream=pdf_content, filetype="pdf")
-        # output_doc = fitz.open()
-        # output_doc.insert_pdf(doc, from_page=start_page-1, to_page=end_page-1)
-        # output = io.BytesIO()
-        # output_doc.save(output)
-        # return output.getvalue()
+        doc = fitz.open(stream=pdf_content, filetype="pdf")
+        output_doc = fitz.open()
+        output_doc.insert_pdf(doc, from_page=start_page-1, to_page=end_page-1)
+        output = io.BytesIO()
+        output_doc.save(output)
+        return output.getvalue()
         
         # Mock split PDF
-        return b'%PDF-1.4\n%\xc4\xe5\xf2\xe5\xeb\xa7\xf3\xa0\xd0\xc4\xc6\n'
+        # return b'%PDF-1.4\n%\xc4\xe5\xf2\xe5\xeb\xa7\xf3\xa0\xd0\xc4\xc6\n'
     
     @staticmethod
     def compress_pdf(pdf_content: bytes, quality: str) -> bytes:
         """Compress PDF based on quality setting"""
         # Mock implementation - in production, use PyMuPDF:
-        # doc = fitz.open(stream=pdf_content, filetype="pdf")
-        # for page in doc:
-        #     page.clean_contents()
-        #     if quality == "low":
-        #         page.apply_redactions(images=False)
-        # output = io.BytesIO()
-        # doc.save(output, garbage=4, deflate=True, deflate_images=True)
-        # return output.getvalue()
+        doc = fitz.open(stream=pdf_content, filetype="pdf")
+        for page in doc:
+            page.clean_contents()
+            if quality == "low":
+                page.apply_redactions(images=False)
+        output = io.BytesIO()
+        doc.save(output, garbage=4, deflate=True, deflate_images=True)
+        return output.getvalue()
         
         # Mock compressed PDF
-        return b'%PDF-1.4\n%\xc4\xe5\xf2\xe5\xeb\xa7\xf3\xa0\xd0\xc4\xc6\n'
+        # return b'%PDF-1.4\n%\xc4\xe5\xf2\xe5\xeb\xa7\xf3\xa0\xd0\xc4\xc6\n'
 
 pdf_processor = PDFProcessor()
 
