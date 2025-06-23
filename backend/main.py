@@ -6,7 +6,12 @@ import io
 import asyncio
 from contextlib import asynccontextmanager
 
-import fitz
+try:
+    import fitz  # PyMuPDF
+    PYMUPDF_AVAILABLE = True
+except ImportError:
+    PYMUPDF_AVAILABLE = False
+    print("Warning: PyMuPDF not available. PDF processing will use mock implementations.")
 
 app = FastAPI(
     title="Privacy PDF Tools API",
@@ -47,57 +52,105 @@ class PDFProcessor:
     @staticmethod
     def merge_pdfs(pdf_files: List[bytes]) -> bytes:
         """Merge multiple PDF files into one"""
-        # Mock implementation - in production, use PyMuPDF:
-        doc = fitz.open()
-        for pdf_bytes in pdf_files:
-            pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-            doc.insert_pdf(pdf_doc)
-        output = io.BytesIO()
-        doc.save(output)
-        return output.getvalue()
+        if not PYMUPDF_AVAILABLE:
+            # Mock merged PDF for development
+            return b'%PDF-1.4\n%Mock merged PDF content\n%%EOF'
         
-        # Mock merged PDF
-        # return b'%PDF-1.4\n%\xc4\xe5\xf2\xe5\xeb\xa7\xf3\xa0\xd0\xc4\xc6\n'
+        try:
+            doc = fitz.open()
+            for pdf_bytes in pdf_files:
+                pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                doc.insert_pdf(pdf_doc)
+                pdf_doc.close()
+            
+            output = io.BytesIO()
+            doc.save(output)
+            doc.close()
+            return output.getvalue()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"PDF merge failed: {str(e)}")
     
     @staticmethod
     def split_pdf(pdf_content: bytes, start_page: int, end_page: int) -> bytes:
         """Extract pages from PDF"""
-        # Mock implementation - in production, use PyMuPDF:
-        doc = fitz.open(stream=pdf_content, filetype="pdf")
-        output_doc = fitz.open()
-        output_doc.insert_pdf(doc, from_page=start_page-1, to_page=end_page-1)
-        output = io.BytesIO()
-        output_doc.save(output)
-        return output.getvalue()
+        if not PYMUPDF_AVAILABLE:
+            # Mock split PDF for development
+            return b'%PDF-1.4\n%Mock split PDF content\n%%EOF'
         
-        # Mock split PDF
-        # return b'%PDF-1.4\n%\xc4\xe5\xf2\xe5\xeb\xa7\xf3\xa0\xd0\xc4\xc6\n'
+        try:
+            doc = fitz.open(stream=pdf_content, filetype="pdf")
+            
+            # Validate page numbers
+            total_pages = len(doc)
+            if start_page > total_pages or end_page > total_pages:
+                doc.close()
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Page numbers exceed document length ({total_pages} pages)"
+                )
+            
+            output_doc = fitz.open()
+            output_doc.insert_pdf(doc, from_page=start_page-1, to_page=end_page-1)
+            
+            output = io.BytesIO()
+            output_doc.save(output)
+            doc.close()
+            output_doc.close()
+            return output.getvalue()
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"PDF split failed: {str(e)}")
     
     @staticmethod
     def compress_pdf(pdf_content: bytes, quality: str) -> bytes:
         """Compress PDF based on quality setting"""
-        # Mock implementation - in production, use PyMuPDF:
-        doc = fitz.open(stream=pdf_content, filetype="pdf")
-        for page in doc:
-            page.clean_contents()
-            if quality == "low":
-                page.apply_redactions(images=False)
-        output = io.BytesIO()
-        doc.save(output, garbage=4, deflate=True, deflate_images=True)
-        return output.getvalue()
+        if not PYMUPDF_AVAILABLE:
+            # Mock compressed PDF for development
+            return b'%PDF-1.4\n%Mock compressed PDF content\n%%EOF'
         
-        # Mock compressed PDF
-        # return b'%PDF-1.4\n%\xc4\xe5\xf2\xe5\xeb\xa7\xf3\xa0\xd0\xc4\xc6\n'
+        try:
+            doc = fitz.open(stream=pdf_content, filetype="pdf")
+            
+            # Apply compression based on quality
+            for page in doc:
+                page.clean_contents()
+                if quality == "low":
+                    # More aggressive compression for low quality
+                    page.apply_redactions(images=False)
+            
+            output = io.BytesIO()
+            
+            # Compression settings based on quality
+            if quality == "low":
+                doc.save(output, garbage=4, deflate=True, deflate_images=True, deflate_fonts=True)
+            elif quality == "medium":
+                doc.save(output, garbage=3, deflate=True, deflate_images=True)
+            else:  # high quality
+                doc.save(output, garbage=2, deflate=True)
+            
+            doc.close()
+            return output.getvalue()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"PDF compression failed: {str(e)}")
 
 pdf_processor = PDFProcessor()
 
 @app.get("/")
 async def root():
-    return {"message": "Privacy PDF Tools API", "status": "healthy"}
+    return {
+        "message": "Privacy PDF Tools API", 
+        "status": "healthy",
+        "pymupdf_available": PYMUPDF_AVAILABLE
+    }
 
 @app.get("/healthz")
 async def health_check():
-    return {"status": "healthy", "service": "pdf-tools-api"}
+    return {
+        "status": "healthy", 
+        "service": "pdf-tools-api",
+        "pymupdf_available": PYMUPDF_AVAILABLE
+    }
 
 @app.post("/merge")
 async def merge_pdfs(files: List[UploadFile] = File(...)):
@@ -110,7 +163,7 @@ async def merge_pdfs(files: List[UploadFile] = File(...)):
     try:
         for file in files:
             # Validate file size
-            if file.size > MAX_FILE_SIZE:
+            if hasattr(file, 'size') and file.size and file.size > MAX_FILE_SIZE:
                 raise HTTPException(
                     status_code=400, 
                     detail=f"File {file.filename} exceeds 25MB limit"
@@ -118,6 +171,13 @@ async def merge_pdfs(files: List[UploadFile] = File(...)):
             
             # Read file content
             content = await file.read()
+            
+            # Check file size after reading
+            if len(content) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"File {file.filename} exceeds 25MB limit"
+                )
             
             # Validate PDF
             if not pdf_processor.validate_pdf(content):
@@ -132,16 +192,16 @@ async def merge_pdfs(files: List[UploadFile] = File(...)):
         merged_pdf = pdf_processor.merge_pdfs(pdf_contents)
         
         # Create response stream
-        output_stream = io.BytesIO(merged_pdf)
-        
         return StreamingResponse(
             io.BytesIO(merged_pdf),
             media_type="application/pdf",
             headers={"Content-Disposition": "attachment; filename=merged.pdf"}
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Merge operation failed: {str(e)}")
     
     finally:
         # Ensure memory cleanup
@@ -154,33 +214,40 @@ async def split_pdf(
     end_page: int = Form(...)
 ):
     """Split PDF by extracting specific pages"""
-    if file.size > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="File exceeds 25MB limit")
-    
-    if start_page > end_page:
-        raise HTTPException(status_code=400, detail="Start page must be <= end page")
-    
     try:
         # Read file content
         content = await file.read()
+        
+        # Validate file size
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="File exceeds 25MB limit")
         
         # Validate PDF
         if not pdf_processor.validate_pdf(content):
             raise HTTPException(status_code=400, detail="Invalid PDF file")
         
+        # Validate page numbers
+        if start_page < 1 or end_page < 1:
+            raise HTTPException(status_code=400, detail="Page numbers must be greater than 0")
+        
+        if start_page > end_page:
+            raise HTTPException(status_code=400, detail="Start page must be <= end page")
+        
         # Process PDF in memory
-        split_pdf = pdf_processor.split_pdf(content, start_page, end_page)
+        split_pdf_content = pdf_processor.split_pdf(content, start_page, end_page)
         
         filename = f"split_pages_{start_page}-{end_page}.pdf"
         
         return StreamingResponse(
-            io.BytesIO(split_pdf),
+            io.BytesIO(split_pdf_content),
             media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Split operation failed: {str(e)}")
 
 @app.post("/compress")
 async def compress_pdf(
@@ -188,19 +255,21 @@ async def compress_pdf(
     quality: str = Form(...)
 ):
     """Compress PDF with specified quality"""
-    if file.size > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="File exceeds 25MB limit")
-    
-    if quality not in ["low", "medium", "high"]:
-        raise HTTPException(status_code=400, detail="Invalid quality setting")
-    
     try:
         # Read file content
         content = await file.read()
         
+        # Validate file size
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="File exceeds 25MB limit")
+        
         # Validate PDF
         if not pdf_processor.validate_pdf(content):
             raise HTTPException(status_code=400, detail="Invalid PDF file")
+        
+        # Validate quality setting
+        if quality not in ["low", "medium", "high"]:
+            raise HTTPException(status_code=400, detail="Invalid quality setting")
         
         # Process PDF in memory
         compressed_pdf = pdf_processor.compress_pdf(content, quality)
@@ -213,8 +282,10 @@ async def compress_pdf(
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Compression operation failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -21,6 +21,7 @@ export function MergeTool() {
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+    setDownloadUrl(null);
   };
 
   const mergePDFs = async () => {
@@ -49,7 +50,7 @@ export function MergeTool() {
         });
       }, 200);
 
-      // Call FastAPI backend directly
+      // Call FastAPI backend
       const response = await fetch('http://localhost:8000/merge', {
         method: 'POST',
         body: formData,
@@ -64,12 +65,13 @@ export function MergeTool() {
         setDownloadUrl(url);
         toast.success('PDFs merged successfully!');
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
         throw new Error(errorData.detail || 'Failed to merge PDFs');
       }
     } catch (error) {
       console.error('Error merging PDFs:', error);
-      toast.error('Failed to merge PDFs. Please ensure the backend is running on port 8000.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to merge PDFs: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
       setTimeout(() => setProgress(0), 2000);
@@ -101,7 +103,7 @@ export function MergeTool() {
             <div className="space-y-2">
               {files.map((file, index) => (
                 <div
-                  key={index}
+                  key={`${file.name}-${index}`}
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                 >
                   <div className="flex-1">
@@ -115,6 +117,7 @@ export function MergeTool() {
                     size="sm"
                     onClick={() => removeFile(index)}
                     className="text-red-500 hover:text-red-700"
+                    aria-label={`Remove ${file.name}`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

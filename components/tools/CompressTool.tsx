@@ -53,7 +53,7 @@ export function CompressTool() {
         });
       }, 400);
 
-      // Call FastAPI backend directly
+      // Call FastAPI backend
       const response = await fetch('http://localhost:8000/compress', {
         method: 'POST',
         body: formData,
@@ -67,25 +67,26 @@ export function CompressTool() {
         const url = URL.createObjectURL(blob);
         setDownloadUrl(url);
         
-        // Mock compression stats
+        // Calculate compression stats
         const originalSize = file.size;
-        const compressedSize = Math.floor(originalSize * (quality === 'high' ? 0.8 : quality === 'medium' ? 0.6 : 0.4));
+        const compressedSize = blob.size;
         const savings = Math.round(((originalSize - compressedSize) / originalSize) * 100);
         
         setCompressionInfo({
           originalSize,
           compressedSize,
-          savings
+          savings: Math.max(0, savings) // Ensure non-negative
         });
         
-        toast.success(`PDF compressed successfully! Saved ${savings}% space.`);
+        toast.success(`PDF compressed successfully! Saved ${Math.max(0, savings)}% space.`);
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
         throw new Error(errorData.detail || 'Failed to compress PDF');
       }
     } catch (error) {
       console.error('Error compressing PDF:', error);
-      toast.error('Failed to compress PDF. Please ensure the backend is running on port 8000.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to compress PDF: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
       setTimeout(() => setProgress(0), 2000);

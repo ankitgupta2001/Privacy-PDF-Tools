@@ -74,12 +74,9 @@
 
 @layer base {
   * {
-    border-width: 1px;
-    border-style: solid;
-    border-color: var(--border-color, #e5e7eb);
+    @apply border-border;
   }
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    @apply bg-background text-foreground;
   }
 }

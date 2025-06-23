@@ -37,6 +37,16 @@ export function SplitTool() {
     const start = parseInt(startPage);
     const end = parseInt(endPage);
 
+    if (isNaN(start) || isNaN(end)) {
+      toast.error('Please enter valid page numbers');
+      return;
+    }
+
+    if (start < 1 || end < 1) {
+      toast.error('Page numbers must be greater than 0');
+      return;
+    }
+
     if (start > end) {
       toast.error('Start page must be less than or equal to end page');
       return;
@@ -62,7 +72,7 @@ export function SplitTool() {
         });
       }, 300);
 
-      // Call FastAPI backend directly
+      // Call FastAPI backend
       const response = await fetch('http://localhost:8000/split', {
         method: 'POST',
         body: formData,
@@ -77,12 +87,13 @@ export function SplitTool() {
         setDownloadUrl(url);
         toast.success('PDF split successfully!');
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
         throw new Error(errorData.detail || 'Failed to split PDF');
       }
     } catch (error) {
       console.error('Error splitting PDF:', error);
-      toast.error('Failed to split PDF. Please ensure the backend is running on port 8000.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to split PDF: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
       setTimeout(() => setProgress(0), 2000);
