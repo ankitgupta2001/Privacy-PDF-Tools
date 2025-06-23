@@ -54,7 +54,7 @@ export function CompressTool() {
       }, 400);
 
       // Call FastAPI backend
-      const response = await fetch('http://localhost:8000/compress', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/compress`, {
         method: 'POST',
         body: formData,
       });

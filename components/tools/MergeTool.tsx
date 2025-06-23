@@ -51,7 +51,7 @@ export function MergeTool() {
       }, 200);
 
       // Call FastAPI backend
-      const response = await fetch('http://localhost:8000/merge', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/merge`, {
         method: 'POST',
         body: formData,
       });

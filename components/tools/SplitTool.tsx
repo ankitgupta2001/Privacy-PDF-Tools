@@ -73,7 +73,7 @@ export function SplitTool() {
       }, 300);
 
       // Call FastAPI backend
-      const response = await fetch('http://localhost:8000/split', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/split`, {
         method: 'POST',
         body: formData,
       });
