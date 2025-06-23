@@ -22,7 +22,7 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://localhost:3000", "https://your-frontend-domain.com"],
+    allow_origins=["http://localhost:3000", "https://privacy-pdf-tools.vercel.app/"],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
